@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhoneSpecs Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .nav-link { cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .nav-link.active { color: #2563eb; font-weight: 700; }
+        .nav-link.active::after { content: ''; position: absolute; bottom: -18px; left: 0; right: 0; height: 3px; background: #2563eb; border-radius: 3px 3px 0 0; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-panel { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="antialiased text-slate-800 bg-slate-50 min-h-screen flex flex-col" x-data="proposalData()">
+
+    <!-- CLEAN LIGHT LOADING OVERLAY -->
+    <div x-show="isLoading" x-transition.opacity.duration.200ms class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm" style="display: none;">
+        <div class="flex flex-col items-center">
+            <svg class="animate-spin h-12 w-12 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm font-bold tracking-widest text-slate-800 uppercase animate-pulse">Loading...</span>
+        </div>
+    </div>
+
+    <!-- REAL COOKIE POPUP SIMULATION -->
+    <div x-show="showCookie" x-transition.opacity.duration.500ms class="fixed bottom-4 left-4 right-4 md:left-auto md:right-8 md:w-[400px] glass-panel rounded-2xl p-6 z-50 shadow-2xl border border-blue-500/30" style="display:none;">
+        <div class="flex items-start gap-4">
+            <div class="text-3xl">🍪</div>
+            <div>
+                <h4 class="font-bold text-white mb-1">We value your privacy</h4>
+                <p class="text-xs text-slate-300 mb-4 leading-relaxed">This is an Alpine.js powered Cookie Consent Popup required by Google Adsense. We use cookies to enhance your browsing experience and serve personalized ads.</p>
+                <div class="flex gap-2">
+                    <button @click="acceptCookie()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 px-4 rounded-lg transition">Accept All Cookies</button>
+                    <button @click="showCookie = false" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-2 px-4 rounded-lg transition">Manage Preferences</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPARE SELECTOR MODAL -->
+    <div x-show="showCompareModal" style="display:none;" x-transition.opacity class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl transform transition-all" @click.away="showCompareModal = false">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+                <h3 class="font-bold text-xl text-slate-800">Select Device to Compare</h3>
+                <button @click="showCompareModal = false" class="text-slate-400 hover:text-slate-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="max-h-[50vh] overflow-y-auto pr-2">
+                <template x-for="p in phones" :key="p.id">
+                    <div @click="selectPhoneForCompare(p)" class="flex items-center gap-4 p-3 hover:bg-blue-50 border border-transparent hover:border-blue-100 cursor-pointer rounded-xl transition group mb-2">
+                        <div class="bg-slate-50 w-16 h-16 rounded-lg flex items-center justify-center p-2"><img :src="p.image" class="h-full object-contain"></div>
+                        <div>
+                            <div class="font-bold text-sm text-slate-800" x-text="p.name"></div>
+                            <div class="text-xs font-semibold text-slate-500" x-text="p.brand"></div>
+                        </div>
+                        <button class="ml-auto text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded group-hover:bg-blue-600 group-hover:text-white transition">Select</button>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Nav -->
+    <nav class="bg-white shadow-sm px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-40 gap-4 md:gap-0">
+        <div class="font-black text-2xl tracking-tighter text-blue-600 flex items-center gap-2" @click="changePage('home')" style="cursor:pointer;">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            PHONESPECS
+        </div>
+        
+        <!-- Search Bar Removed -->
+
+        <div class="flex gap-4 md:gap-6 text-sm font-semibold text-slate-500 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-hide justify-start md:justify-center px-2 md:px-0">
+            <a @click.prevent="changePage('home')" :class="{ 'active': activePage === 'home' }" class="nav-link hover:text-blue-600 whitespace-nowrap shrink-0">Home</a>
+            <a @click.prevent="changePage('compare')" :class="{ 'active': activePage === 'compare' }" class="nav-link hover:text-blue-600 whitespace-nowrap shrink-0 flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg> Compare</a>
+            <a @click.prevent="changePage('terms')" :class="{ 'active': activePage === 'terms' }" class="nav-link hover:text-blue-600 whitespace-nowrap shrink-0">Terms</a>
+            <a @click.prevent="changePage('privacy')" :class="{ 'active': activePage === 'privacy' }" class="nav-link hover:text-blue-600 whitespace-nowrap shrink-0">Privacy</a>
+            <a @click.prevent="changePage('contact')" :class="{ 'active': activePage === 'contact' }" class="nav-link hover:text-blue-600 whitespace-nowrap shrink-0">Contact</a>
+        </div>
+    </nav>
+
+    <div class="flex-grow flex flex-col">
+        <!-- PAGE: HOME -->
+        <div x-show="activePage === 'home'" x-transition.opacity class="flex-grow pb-12">
+            <!-- Hero Featured Device & Ad (Side by Side like Mockup) -->
+            <div class="max-w-6xl mx-auto px-4 md:px-6 mt-8 flex flex-col md:flex-row gap-6" x-show="!selectedBrand">
+                <!-- Hero Left -->
+                <div class="w-full md:w-[70%] bg-blue-50 rounded-2xl overflow-hidden flex flex-col md:flex-row items-center cursor-pointer hover:shadow-lg transition-all border border-blue-100 group" @click="viewDetail(phones[0])">
+                    <div class="w-full md:w-1/2 p-6 md:p-10 text-center md:text-left">
+                        <span class="text-blue-600 font-bold tracking-widest text-xs uppercase mb-2 block">LATEST FLAGSHIP:</span>
+                        <h3 class="text-3xl md:text-4xl font-black text-slate-800 mb-2" x-text="phones[0].name"></h3>
+                        <p class="font-bold text-slate-700 mb-2" x-text="phones[0].name + ' - $999'"></p>
+                        <p class="text-xs text-slate-600 mb-6 font-medium" x-text="phones[0].display + ' | ' + phones[0].camera + ' | ' + phones[0].battery"></p>
+                        <div class="flex gap-2 justify-center md:justify-start">
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition text-sm">View Full Specs</button>
+                            <button @click.stop="addToCompare(phones[0])" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold py-2 px-4 rounded-lg shadow-sm transition text-sm">Compare</button>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2 flex justify-center p-4">
+                        <img :src="phones[0].image" class="h-48 md:h-64 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                </div>
+
+                <!-- Ad Slot Right -->
+                <div class="w-full md:w-[30%] min-h-[250px] bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 relative group overflow-hidden">
+                    <span class="text-xs mb-1">728x90 (Responsive)</span>
+                    <span class="font-bold text-sm text-center">ADVERTISEMENT -<br>2026 Gadget Sale</span>
+                </div>
+            </div>
+
+            <!-- Content Grid with Brands Sidebar -->
+            <div class="max-w-6xl mx-auto px-4 md:px-6 mt-8 flex flex-col md:flex-row gap-6 md:gap-8">
+                <!-- Left Sidebar: Brands Filter -->
+                <div class="w-full md:w-1/5">
+                    <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm md:sticky md:top-24">
+                        <h3 class="hidden md:block text-xs font-bold text-slate-800 uppercase tracking-widest bg-slate-100 p-3 border-b border-slate-200">Phone Finder</h3>
+                        <ul class="flex md:flex-col overflow-x-auto md:overflow-y-auto max-h-96 text-sm font-medium text-slate-600 p-3 md:p-0 gap-2 md:gap-0 scrollbar-hide">
+                            <li class="shrink-0">
+                                <a @click.prevent="filterBrand(null)" class="flex justify-between items-center cursor-pointer px-4 py-2 md:p-3 md:border-b md:border-slate-100 rounded-full md:rounded-none bg-slate-100 md:bg-transparent hover:bg-blue-50 transition whitespace-nowrap" :class="{'text-blue-600 bg-blue-100 font-bold md:border-l-2 md:border-l-blue-600': !selectedBrand}">
+                                    <span>All Brands</span>
+                                </a>
+                            </li>
+                            <template x-for="b in brands" :key="b">
+                                <li class="shrink-0">
+                                    <a @click.prevent="filterBrand(b)" class="flex justify-between items-center cursor-pointer px-4 py-2 md:p-3 md:border-b md:border-slate-100 rounded-full md:rounded-none bg-slate-100 md:bg-transparent hover:bg-blue-50 transition whitespace-nowrap" :class="{'text-blue-600 bg-blue-100 font-bold md:border-l-2 md:border-l-blue-600': selectedBrand === b}">
+                                        <span x-text="b"></span>
+                                        <svg class="hidden md:block w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                    </a>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Main Phone List -->
+                <div class="w-full md:w-3/5">
+                    <div class="flex justify-between items-end border-b-2 border-slate-800 pb-2 mb-6">
+                        <h3 class="text-xl font-bold text-slate-800" x-text="selectedBrand ? 'Phones by ' + selectedBrand : 'Latest Devices'"></h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                        <template x-for="phone in filteredPhones" :key="phone.id">
+                            <div class="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer flex flex-col group" @click="viewDetail(phone)">
+                                <div class="h-40 md:h-48 bg-slate-50 flex items-center justify-center p-4 border-b border-slate-100 overflow-hidden relative">
+                                    <img :src="phone.image" :alt="phone.name" class="h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl rounded-lg">
+                                </div>
+                                <div class="p-3 md:p-4 flex-grow flex flex-col justify-between">
+                                    <div>
+                                        <h4 class="font-extrabold text-sm md:text-base text-slate-800 line-clamp-1" x-text="phone.name"></h4>
+                                        <p class="text-xs font-bold text-slate-500 mt-1 mb-2" x-text="phone.brand + ' ' + phone.name"></p>
+                                        <div class="text-[9px] md:text-[10px] text-slate-500 mb-4 flex flex-col gap-1 items-start border-t border-slate-100 pt-3 w-full text-left">
+                                            <div class="flex items-center gap-1.5 text-slate-600"><svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg> <span class="line-clamp-1" x-text="'Camera: ' + phone.camera"></span></div>
+                                            <div class="flex items-center gap-1.5 text-slate-600"><svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"></path></svg> <span class="line-clamp-1" x-text="'Battery: ' + phone.battery"></span></div>
+                                            <div class="flex items-center gap-1.5 text-slate-600"><svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> <span class="line-clamp-1" x-text="'Display: ' + phone.display.split(' ')[0]"></span></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 mt-auto w-full">
+                                        <button class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded group-hover:bg-blue-600 group-hover:text-white transition flex-grow flex items-center justify-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Specs
+                                        </button>
+                                        <button @click.stop="addToCompare(phone)" class="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded transition flex items-center justify-center" title="Compare">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="filteredPhones.length === 0" class="col-span-full text-center py-12 text-slate-500">
+                            No devices found for this brand.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar / Adsense Sidebar -->
+                <div class="w-full md:w-1/5">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest border-b border-slate-300 pb-2 mb-4">Advertisement</h3>
+                    <div class="w-full h-[600px] bg-slate-800 rounded-lg flex flex-col items-center justify-center text-white p-4 relative overflow-hidden bg-cover bg-center shadow-inner sticky top-24" style="background-image: url('https://images.unsplash.com/photo-1557838923-2985c318be48?q=80&w=300&h=800&auto=format&fit=crop');">
+                        <div class="absolute inset-0 bg-slate-900/70"></div>
+                        <span class="font-bold text-sm mb-2 relative z-10 text-yellow-400 text-center drop-shadow-md">ADSENSE<br>(SIDEBAR)</span>
+                        <span class="text-[10px] relative z-10 opacity-80 text-center">Responsive<br>160 x 600</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: DETAIL -->
+        <div x-show="activePage === 'detail'" style="display:none;" x-transition.opacity class="w-full max-w-6xl mx-auto px-6 py-8 flex-grow">
+            <div class="flex justify-between items-center mb-6">
+                <button @click="changePage('home')" class="text-blue-600 text-sm font-bold flex items-center gap-1 hover:underline"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> Back to Home</button>
+                <span class="text-xs text-slate-400" x-text="`Brands / ${selectedPhone?.brand} / ${selectedPhone?.name}`"></span>
+            </div>
+            
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden mb-8 shadow-sm">
+                <div class="bg-slate-50 px-6 md:px-8 py-6 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-3xl font-extrabold text-slate-800" x-text="selectedPhone?.name"></h2>
+                        <p class="text-sm text-slate-500 mt-1" x-text="'Released ' + selectedPhone?.release + ' | ' + selectedPhone?.brand"></p>
+                    </div>
+                    <button @click="addToCompare(selectedPhone)" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold py-2 px-4 rounded-lg shadow-sm transition text-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg> Add to Compare
+                    </button>
+                </div>
+                
+                <div class="p-6 md:p-8 flex flex-col md:flex-row gap-8">
+                    <div class="w-full md:w-1/3 flex flex-col items-center">
+                        <div class="h-64 md:h-80 mb-6 flex items-center justify-center w-full p-4 border border-slate-100 rounded-xl bg-white">
+                            <img :src="selectedPhone?.image" :alt="selectedPhone?.name" class="h-full object-contain drop-shadow-2xl hover:scale-105 transition-transform">
+                        </div>
+                        <div class="w-full grid grid-cols-2 gap-3 text-center text-sm">
+                            <div class="bg-slate-50 p-3 border border-slate-100 rounded">
+                                <div class="font-bold text-slate-700 text-xl" x-text="selectedPhone?.display.split(' ')[0]"></div>
+                                <div class="text-slate-500 text-xs">Display</div>
+                            </div>
+                            <div class="bg-slate-50 p-3 border border-slate-100 rounded">
+                                <div class="font-bold text-slate-700 text-xl" x-text="selectedPhone?.camera.split(' ')[0]"></div>
+                                <div class="text-slate-500 text-xs">Camera</div>
+                            </div>
+                            <div class="bg-slate-50 p-3 border border-slate-100 rounded">
+                                <div class="font-bold text-slate-700 text-xl" x-text="selectedPhone?.ram.split(' ')[0]"></div>
+                                <div class="text-slate-500 text-xs">RAM</div>
+                            </div>
+                            <div class="bg-slate-50 p-3 border border-slate-100 rounded">
+                                <div class="font-bold text-slate-700 text-xl" x-text="selectedPhone?.battery.split(' ')[0]"></div>
+                                <div class="text-slate-500 text-xs">Battery</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full md:w-2/3">
+                        <div class="w-full h-[90px] bg-slate-100 border-2 border-dashed border-slate-300 rounded mb-6 flex items-center justify-center text-slate-400 text-xs font-bold">ADSENSE (IN-ARTICLE SLOT)</div>
+                        <table class="w-full text-sm text-left border-collapse">
+                            <tbody>
+                                <tr><th colspan="2" class="text-red-600 font-bold uppercase text-xs py-2 border-b border-slate-200">Network</th></tr>
+                                <tr><th class="py-2 text-slate-500 w-1/3 align-top">Technology</th><td class="py-2 text-slate-700 border-b border-slate-100">GSM / CDMA / HSPA / EVDO / LTE / 5G</td></tr>
+                                
+                                <tr><th colspan="2" class="text-red-600 font-bold uppercase text-xs py-2 mt-4 border-b border-slate-200 inline-block">Body</th></tr>
+                                <tr><th class="py-2 text-slate-500 w-1/3 align-top">Dimensions</th><td class="py-2 text-slate-700 border-b border-slate-100">162.3 x 79 x 8.6 mm</td></tr>
+                                <tr><th class="py-2 text-slate-500 w-1/3 align-top">Weight</th><td class="py-2 text-slate-700 border-b border-slate-100">232 g</td></tr>
+
+                                <tr><th colspan="2" class="text-red-600 font-bold uppercase text-xs py-2 mt-4 border-b border-slate-200 inline-block">Display</th></tr>
+                                <tr><th class="py-2 text-slate-500 w-1/3 align-top">Type</th><td class="py-2 text-slate-700 border-b border-slate-100" x-text="selectedPhone?.display + ', 120Hz, HDR10+'"></td></tr>
+                                
+                                <tr><th colspan="2" class="text-red-600 font-bold uppercase text-xs py-2 mt-4 border-b border-slate-200 inline-block">Platform</th></tr>
+                                <tr><th class="py-2 text-slate-500 w-1/3 align-top">OS</th><td class="py-2 text-slate-700 border-b border-slate-100">Android / Latest OS</td></tr>
+                                <tr><th class="py-2 text-slate-500 w-1/3 align-top">Memory</th><td class="py-2 text-slate-700 border-b border-slate-100" x-text="selectedPhone?.ram + ' Internal Storage'"></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Similar Devices -->
+            <div class="mt-12 mb-8">
+                <h3 class="text-xl font-bold mb-6 border-l-4 border-blue-600 pl-3">Similar Devices</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <template x-for="simPhone in getSimilarPhones()" :key="simPhone.id">
+                        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-blue-500 cursor-pointer p-4 text-center group transition" @click="viewDetail(simPhone)">
+                            <img :src="simPhone.image" class="h-28 mx-auto object-contain mb-3 drop-shadow-md group-hover:scale-110 transition-transform">
+                            <h4 class="font-bold text-xs text-slate-800" x-text="simPhone.name"></h4>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: COMPARE (New Killer Feature) -->
+        <div x-show="activePage === 'compare'" style="display:none;" x-transition.opacity class="max-w-6xl mx-auto px-6 py-12 flex-grow w-full">
+            <div class="flex justify-between items-end mb-8 border-b-2 border-slate-800 pb-2">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-800">Phone Comparison Tool</h2>
+                    <p class="text-slate-500 text-sm mt-1">Compare specifications side-by-side</p>
+                </div>
+                <button @click="changePage('home')" class="text-blue-600 text-sm font-bold hover:underline mb-1">Back</button>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-6 md:gap-8 min-h-[400px]">
+                <!-- Compare Slot 1 -->
+                <div>
+                    <template x-if="comparePhone1">
+                        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition h-full">
+                            <div class="p-6 text-center border-b border-slate-100 bg-slate-50 relative group">
+                                <img :src="comparePhone1?.image" class="h-48 mx-auto object-contain mb-4 drop-shadow-lg">
+                                <h3 class="text-2xl font-black text-slate-800" x-text="comparePhone1?.name"></h3>
+                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1" x-text="comparePhone1?.brand"></p>
+                                
+                                <!-- Select button overlay -->
+                                <div class="absolute inset-0 bg-blue-900/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
+                                    <button @click.stop="openCompareSelector(1)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 w-32 rounded-lg shadow-lg transition">Change</button>
+                                    <button @click.stop="removeFromCompare(1)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 w-32 rounded-lg shadow-lg transition">Remove</button>
+                                </div>
+                            </div>
+                            <table class="w-full text-sm">
+                                <tbody>
+                                    <tr><th class="py-3 px-4 border-b border-slate-100 text-left text-slate-500 w-1/3 bg-white">Display</th><td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-800 bg-slate-50" x-text="comparePhone1?.display"></td></tr>
+                                    <tr><th class="py-3 px-4 border-b border-slate-100 text-left text-slate-500 w-1/3 bg-white">Camera</th><td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-800 bg-slate-50" x-text="comparePhone1?.camera"></td></tr>
+                                    <tr><th class="py-3 px-4 border-b border-slate-100 text-left text-slate-500 w-1/3 bg-white">RAM</th><td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-800 bg-slate-50" x-text="comparePhone1?.ram"></td></tr>
+                                    <tr><th class="py-3 px-4 border-b border-slate-100 text-left text-slate-500 w-1/3 bg-white">Battery</th><td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-800 bg-slate-50" x-text="comparePhone1?.battery"></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+                    <template x-if="!comparePhone1">
+                        <div class="h-full bg-gradient-to-b from-slate-50 to-slate-100/50 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-12 cursor-pointer hover:bg-blue-50 hover:border-blue-400 hover:shadow-inner transition-all group min-h-[400px] relative overflow-hidden" @click="openCompareSelector(1)">
+                            <!-- Faint phone silhouette -->
+                            <svg class="absolute inset-0 w-full h-full text-slate-200 opacity-40 transform scale-[1.8] translate-y-20 transition-transform group-hover:scale-[1.9]" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H7zm5 17a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"></path></svg>
+                            
+                            <div class="relative z-10 flex flex-col items-center">
+                                <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-md group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all text-blue-500 ring-4 ring-white">
+                                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </div>
+                                <span class="font-black text-slate-700 text-xl group-hover:text-blue-600 transition-colors">Select Device</span>
+                                <span class="text-sm font-medium text-slate-400 mt-2 text-center">Click to choose a phone<br>for comparison</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Compare Slot 2 -->
+                <div>
+                    <template x-if="comparePhone2">
+                        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition h-full">
+                            <div class="p-6 text-center border-b border-slate-100 bg-slate-50 relative group">
+                                <img :src="comparePhone2?.image" class="h-48 mx-auto object-contain mb-4 drop-shadow-lg">
+                                <h3 class="text-2xl font-black text-slate-800" x-text="comparePhone2?.name"></h3>
+                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1" x-text="comparePhone2?.brand"></p>
+                                
+                                <!-- Select button overlay -->
+                                <div class="absolute inset-0 bg-blue-900/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
+                                    <button @click.stop="openCompareSelector(2)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 w-32 rounded-lg shadow-lg transition">Change</button>
+                                    <button @click.stop="removeFromCompare(2)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 w-32 rounded-lg shadow-lg transition">Remove</button>
+                                </div>
+                            </div>
+                            <table class="w-full text-sm">
+                                <tbody>
+                                    <tr><th class="py-3 px-4 border-b border-slate-100 text-left text-slate-500 w-1/3 bg-white">Display</th><td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-800 bg-slate-50" x-text="comparePhone2?.display"></td></tr>
+                                    <tr><th class="py-3 px-4 border-b border-slate-100 text-left text-slate-500 w-1/3 bg-white">Camera</th><td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-800 bg-slate-50" x-text="comparePhone2?.camera"></td></tr>
+                                    <tr><th class="py-3 px-4 border-b border-slate-100 text-left text-slate-500 w-1/3 bg-white">RAM</th><td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-800 bg-slate-50" x-text="comparePhone2?.ram"></td></tr>
+                                    <tr><th class="py-3 px-4 border-b border-slate-100 text-left text-slate-500 w-1/3 bg-white">Battery</th><td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-800 bg-slate-50" x-text="comparePhone2?.battery"></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+                    <template x-if="!comparePhone2">
+                        <div class="h-full bg-gradient-to-b from-slate-50 to-slate-100/50 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-12 cursor-pointer hover:bg-blue-50 hover:border-blue-400 hover:shadow-inner transition-all group min-h-[400px] relative overflow-hidden" @click="openCompareSelector(2)">
+                            <!-- Faint phone silhouette -->
+                            <svg class="absolute inset-0 w-full h-full text-slate-200 opacity-40 transform scale-[1.8] translate-y-20 transition-transform group-hover:scale-[1.9]" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H7zm5 17a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"></path></svg>
+                            
+                            <div class="relative z-10 flex flex-col items-center">
+                                <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-md group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all text-blue-500 ring-4 ring-white">
+                                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </div>
+                                <span class="font-black text-slate-700 text-xl group-hover:text-blue-600 transition-colors">Select Device</span>
+                                <span class="text-sm font-medium text-slate-400 mt-2 text-center">Click to choose a phone<br>for comparison</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: TERMS OF USE -->
+        <div x-show="activePage === 'terms'" style="display:none;" x-transition.opacity class="max-w-4xl mx-auto px-6 py-12 flex-grow w-full">
+            <h2 class="text-3xl font-bold mb-6 text-slate-800">Terms of Use</h2>
+            <div class="bg-white p-8 border border-slate-200 rounded-xl prose prose-slate max-w-none shadow-sm">
+                <p class="text-sm text-slate-500 mb-6 font-semibold">Effective Date: May 1, 2026</p>
+                
+                <h3 class="text-lg font-bold text-slate-800 mt-6 mb-3">1. Acceptance of Terms</h3>
+                <p class="text-slate-600 mb-4 leading-relaxed">By accessing and using PhoneSpecs (the "Service"), you agree to be bound by these Terms of Use. The Service provides mobile device specifications, comparisons, and related technological information. If you do not agree to these terms, please do not use our website.</p>
+                
+                <h3 class="text-lg font-bold text-slate-800 mt-6 mb-3">2. Accuracy of Specifications</h3>
+                <p class="text-slate-600 mb-4 leading-relaxed">While we strive to provide the most accurate and up-to-date information regarding smartphone dimensions, display panels, camera sensors, and battery capacities, PhoneSpecs does not guarantee that any product specifications are 100% accurate. Manufacturers may change specifications via software updates or regional variants.</p>
+                
+                <h3 class="text-lg font-bold text-slate-800 mt-6 mb-3">3. Intellectual Property</h3>
+                <p class="text-slate-600 mb-4 leading-relaxed">All content on PhoneSpecs, including text, graphics, logos, and data compilations, is the property of PhoneSpecs or its content suppliers. Brand names and product images remain the trademarks and copyright of their respective owners (e.g., Apple Inc., Samsung Electronics). The usage of these images is strictly for identification and informational purposes under Fair Use.</p>
+            </div>
+        </div>
+
+        <!-- PAGE: PRIVACY POLICY -->
+        <div x-show="activePage === 'privacy'" style="display:none;" x-transition.opacity class="max-w-4xl mx-auto px-6 py-12 flex-grow w-full">
+            <h2 class="text-3xl font-bold mb-6 text-slate-800">Privacy Policy</h2>
+            <div class="bg-white p-8 border border-slate-200 rounded-xl prose prose-slate max-w-none shadow-sm">
+                <p class="text-sm text-slate-500 mb-6 font-semibold">Last Updated: May 1, 2026</p>
+
+                <p class="text-slate-600 mb-4 leading-relaxed">At PhoneSpecs, accessible from phonespecs.com, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by PhoneSpecs and how we use it.</p>
+
+                <h3 class="text-lg font-bold text-slate-800 mt-6 mb-3">Log Files and Analytics</h3>
+                <p class="text-slate-600 mb-4 leading-relaxed">PhoneSpecs follows a standard procedure of using log files. The information collected by log files include internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date and time stamp, referring/exit pages, and possibly the number of clicks. The purpose of the information is for analyzing device popularity trends, administering the site, and tracking users' movement on the website.</p>
+
+                <h3 class="text-lg font-bold text-slate-800 mt-6 mb-3">Google AdSense and Advertising Cookies</h3>
+                <p class="text-slate-600 mb-4 leading-relaxed">Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to your website or other websites. Google's use of advertising cookies enables it and its partners to serve ads to our users based on their visit to our sites and/or other sites on the Internet. Users may opt out of personalized advertising by visiting Google's Ads Settings.</p>
+            </div>
+        </div>
+
+        <!-- PAGE: CONTACT US -->
+        <div x-show="activePage === 'contact'" style="display:none;" x-transition.opacity class="max-w-5xl mx-auto px-6 py-12 flex-grow w-full">
+            <h2 class="text-3xl font-black mb-8 text-slate-800 text-center">Contact Us</h2>
+            <div class="grid md:grid-cols-5 gap-8">
+                <div class="md:col-span-2">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4">Get in Touch</h3>
+                    <p class="text-slate-600 mb-8 leading-relaxed">Have a question about a specific device's specifications? Found an error in our database? Or interested in advertising opportunities? We'd love to hear from you.</p>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 border border-blue-100"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg">Email Us</h4>
+                                <p class="text-sm text-slate-500 mt-1">support@phonespecs.com<br>adsense@phonespecs.com</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 border border-blue-100"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg">Office</h4>
+                                <p class="text-sm text-slate-500 mt-1">Tech Valley Center<br>San Francisco, CA 94105</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md:col-span-3 bg-white p-8 border border-slate-200 rounded-2xl shadow-sm">
+                    <form @submit.prevent>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">Full Name</label>
+                                <input type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 outline-none focus:border-blue-500 focus:bg-white transition" placeholder="John Doe">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">Email Address</label>
+                                <input type="email" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 outline-none focus:border-blue-500 focus:bg-white transition" placeholder="john@example.com">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Subject</label>
+                            <select class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 outline-none focus:border-blue-500 focus:bg-white transition text-slate-700">
+                                <option>Correction in Phone Specifications</option>
+                                <option>General Inquiry</option>
+                                <option>Advertising / AdSense Placement</option>
+                            </select>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Message</label>
+                            <textarea rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 outline-none focus:border-blue-500 focus:bg-white transition resize-none" placeholder="How can we help you?"></textarea>
+                        </div>
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl w-full transition shadow-md hover:shadow-lg">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW FULL FOOTER -->
+    <footer class="bg-slate-900 text-slate-300 pt-16 pb-8 mt-auto border-t border-slate-800">
+        <div class="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <div class="col-span-1 md:col-span-2">
+                <div class="font-black text-2xl tracking-tighter text-white mb-4 flex items-center gap-2">
+                    <div class="bg-blue-600 p-1.5 rounded-lg text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    </div>
+                    PHONESPECS
+                </div>
+                <p class="text-sm text-slate-400 mb-6 pr-8 leading-relaxed">Your ultimate destination for the most comprehensive and up-to-date mobile phone specifications. Find the perfect device that fits your lifestyle.</p>
+                <div class="flex gap-4">
+                    <a href="#" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg></a>
+                    <a href="#" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+                    <a href="#" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-white font-bold mb-6 text-lg">Quick Links</h4>
+                <ul class="space-y-3 text-sm text-slate-400">
+                    <li><a @click.prevent="changePage('home')" class="hover:text-blue-400 cursor-pointer flex items-center gap-2 transition"><span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>Home</a></li>
+                    <li><a @click.prevent="changePage('compare')" class="hover:text-blue-400 cursor-pointer flex items-center gap-2 transition"><span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>Compare Devices</a></li>
+                    <li><a @click.prevent="changePage('terms')" class="hover:text-blue-400 cursor-pointer flex items-center gap-2 transition"><span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>Terms of Use</a></li>
+                    <li><a @click.prevent="changePage('privacy')" class="hover:text-blue-400 cursor-pointer flex items-center gap-2 transition"><span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>Privacy Policy</a></li>
+                    <li><a @click.prevent="changePage('contact')" class="hover:text-blue-400 cursor-pointer flex items-center gap-2 transition"><span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>Contact Us</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-white font-bold mb-6 text-lg">Top Brands</h4>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="b in brands" :key="b">
+                        <button @click="filterBrand(b)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-1.5 px-3 rounded-full transition" x-text="b"></button>
+                    </template>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-6xl mx-auto px-6 pt-8 border-t border-slate-800/50 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
+            <p>&copy; 2026 PhoneSpecs Database. All rights reserved.</p>
+            <p class="mt-2 md:mt-0 font-medium">Designed for Mobile Enthusiasts</p>
+        </div>
+    </footer>
+
+    <script>
+        function proposalData() {
+            return {
+                isLoading: false,
+                showCookie: false,
+                activePage: 'home',
+                selectedBrand: null,
+                selectedPhone: null,
+                
+                comparePhone1: null,
+                comparePhone2: null,
+                showCompareModal: false,
+                slotToChange: 2,
+
+                brands: ['Samsung', 'Apple', 'Xiaomi', 'Google', 'OnePlus', 'Asus'],
+                phones: [
+                    { id: 1, brand: "Google", name: "Pixel 9 Pro", release: "Okt 2025", display: "6.7\" LTPO OLED", camera: "50MP + 48MP", ram: "12GB RAM", battery: "5050 mAh", image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=400&auto=format&fit=crop" },
+                    { id: 2, brand: "Apple", name: "iPhone 16 Pro Max", release: "Sep 2025", display: "6.7\" Super Retina XDR", camera: "48MP + 12MP", ram: "8GB RAM", battery: "4422 mAh", image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?q=80&w=400&auto=format&fit=crop" },
+                    { id: 3, brand: "Samsung", name: "Galaxy S24 Ultra", release: "Jan 2026", display: "6.8\" Dynamic AMOLED", camera: "200MP + 50MP", ram: "12GB RAM", battery: "5000 mAh", image: "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?q=80&w=400&auto=format&fit=crop" },
+                    { id: 4, brand: "Xiaomi", name: "Xiaomi 14 Pro", release: "Nov 2025", display: "6.73\" LTPO AMOLED", camera: "50MP Triple", ram: "12/16GB", battery: "4880 mAh", image: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?q=80&w=400&auto=format&fit=crop" },
+                    { id: 5, brand: "OnePlus", name: "OnePlus 12", release: "Des 2025", display: "6.82\" AMOLED", camera: "50MP + 64MP", ram: "16GB RAM", battery: "5400 mAh", image: "https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?q=80&w=400&auto=format&fit=crop" },
+                    { id: 6, brand: "Asus", name: "ROG Phone 8 Pro", release: "Jan 2026", display: "6.78\" AMOLED 165Hz", camera: "50MP + 32MP", ram: "16/24GB", battery: "5500 mAh", image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=400&auto=format&fit=crop" },
+                    { id: 7, brand: "Samsung", name: "Galaxy A55 5G", release: "Mar 2026", display: "6.6\" Super AMOLED", camera: "50MP + 12MP", ram: "8GB RAM", battery: "5000 mAh", image: "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?q=80&w=400&auto=format&fit=crop" },
+                    { id: 8, brand: "Apple", name: "iPhone 15", release: "Sep 2024", display: "6.1\" Super Retina XDR", camera: "48MP + 12MP", ram: "6GB RAM", battery: "3349 mAh", image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?q=80&w=400&auto=format&fit=crop" }
+                ],
+                
+                addToCompare(phone) {
+                    this.isLoading = true;
+                    setTimeout(() => {
+                        this.comparePhone1 = phone;
+                        if(!this.comparePhone2 || this.comparePhone2.id === phone.id) {
+                            this.comparePhone2 = this.phones.find(p => p.id !== phone.id);
+                        }
+                        this.activePage = 'compare';
+                        this.isLoading = false;
+                        window.scrollTo(0,0);
+                    }, 500);
+                },
+
+                removeFromCompare(slot) {
+                    this.isLoading = true;
+                    setTimeout(() => {
+                        if (slot === 1) this.comparePhone1 = null;
+                        else this.comparePhone2 = null;
+                        this.isLoading = false;
+                    }, 400);
+                },
+
+                openCompareSelector(slot) {
+                    this.slotToChange = slot;
+                    this.showCompareModal = true;
+                },
+
+                selectPhoneForCompare(phone) {
+                    this.isLoading = true;
+                    this.showCompareModal = false;
+                    setTimeout(() => {
+                        if (this.slotToChange === 1) this.comparePhone1 = phone;
+                        else this.comparePhone2 = phone;
+                        this.isLoading = false;
+                    }, 400);
+                },
+                get filteredPhones() {
+                    if (!this.selectedBrand) return this.phones;
+                    return this.phones.filter(p => p.brand === this.selectedBrand);
+                },
+                changePage(page) {
+                    this.isLoading = true;
+                    setTimeout(() => {
+                        this.activePage = page;
+                        this.isLoading = false;
+                        window.scrollTo(0,0);
+                    }, 500);
+                },
+                filterBrand(brand) {
+                    this.isLoading = true;
+                    setTimeout(() => {
+                        this.selectedBrand = brand;
+                        this.activePage = 'home';
+                        this.isLoading = false;
+                        window.scrollTo(0,0);
+                    }, 500);
+                },
+                viewDetail(phone) {
+                    this.isLoading = true;
+                    setTimeout(() => {
+                        this.selectedPhone = phone;
+                        this.activePage = 'detail';
+                        this.isLoading = false;
+                        window.scrollTo(0,0);
+                    }, 600);
+                },
+                getSimilarPhones() {
+                    if (!this.selectedPhone) return [];
+                    let similar = this.phones.filter(p => p.id !== this.selectedPhone.id && p.brand === this.selectedPhone.brand);
+                    if(similar.length < 4) {
+                        const others = this.phones.filter(p => p.id !== this.selectedPhone.id && p.brand !== this.selectedPhone.brand);
+                        similar = [...similar, ...others].slice(0, 4);
+                    }
+                    return similar.slice(0, 4);
+                },
+                init() {
+                    setTimeout(() => { this.showCookie = true; }, 1500);
+                },
+                acceptCookie() {
+                    this.showCookie = false;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
