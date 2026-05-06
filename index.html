@@ -3,99 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhoneSpecs Project Links</title>
+    <title>PhoneSpecs | Project Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f4f4f5;
-            color: #18181b;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
+            overflow: hidden;
+            position: relative;
         }
+
+        /* Animated Background Gradients */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.5;
+            animation: float 10s infinite alternate ease-in-out;
+            z-index: -1;
+        }
+        
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            top: -100px;
+            left: -100px;
+        }
+        
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, #ec4899, #f43f5e);
+            bottom: -150px;
+            right: -100px;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 50px) scale(1.1); }
+        }
+
         .container {
-            background-color: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            max-width: 500px;
             width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            z-index: 10;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
             text-align: center;
+            margin-bottom: 2.5rem;
         }
+
+        .logo-icon {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #3b82f6, #2dd4bf);
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+        }
+
         h1 {
-            margin-top: 0;
-            font-size: 24px;
-            color: #09090b;
-            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        .links {
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .links-grid {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 16px;
         }
-        .link-card {
+
+        .link-item {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 16px 24px;
-            background-color: #fcfcfc;
-            border: 1px solid #e4e4e7;
-            border-radius: 8px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
             text-decoration: none;
-            color: #18181b;
-            font-weight: 500;
-            transition: all 0.2s ease;
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
-        .link-card:hover {
-            background-color: #f3f4f6;
-            border-color: #d1d5db;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+        .link-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
         }
-        .link-card span.desc {
-            font-size: 14px;
-            color: #71717a;
-            font-weight: 400;
+
+        .link-item:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+        }
+
+        .link-item:hover::before {
+            transform: translateX(100%);
+        }
+
+        .link-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 16px;
+            color: #60a5fa;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .link-item:hover .link-icon {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .link-content {
+            flex-grow: 1;
+        }
+
+        .link-title {
+            font-size: 16px;
+            font-weight: 600;
             display: block;
-            margin-top: 4px;
-            text-align: left;
+            margin-bottom: 4px;
         }
-        .link-card div {
-            text-align: left;
+
+        .link-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: block;
         }
-        .icon {
-            color: #3b82f6;
+
+        .arrow-icon {
+            color: var(--text-muted);
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+
+        .link-item:hover .arrow-icon {
+            transform: translateX(4px);
+            color: white;
+        }
+
+        @media (max-width: 600px) {
+            .glass-card {
+                padding: 30px 20px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    
     <div class="container">
-        <h1>PhoneSpecs Project Links</h1>
-        <div class="links">
-            <a href="proposal_aries.html" class="link-card">
-                <div>
-                    <strong>Project Proposal</strong>
-                    <span class="desc">Aries' proposal for the PhoneSpecs project</span>
+        <div class="glass-card">
+            <div class="header">
+                <div class="logo-icon">
+                    <svg width="32" height="32" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                    </svg>
                 </div>
-                <svg class="icon" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </a>
-            <a href="phonespecs_demo.html" class="link-card">
-                <div>
-                    <strong>Interactive Demo</strong>
-                    <span class="desc">Live demo of the PhoneSpecs application</span>
-                </div>
-                <svg class="icon" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </a>
-            <a href="Proposal_Aries.pdf" class="link-card" target="_blank">
-                <div>
-                    <strong>Proposal (PDF)</strong>
-                    <span class="desc">Downloadable PDF version of the proposal</span>
-                </div>
-                <svg class="icon" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            </a>
+                <h1>PhoneSpecs Hub</h1>
+                <p class="subtitle">Akses seluruh dokumen proposal dan purwarupa interaktif dari satu tempat.</p>
+            </div>
+
+            <div class="links-grid">
+                <a href="/demo" class="link-item">
+                    <div class="link-icon">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                    </div>
+                    <div class="link-content">
+                        <span class="link-title">Interactive Demo</span>
+                        <span class="link-desc">Preview aplikasi secara live</span>
+                    </div>
+                    <div class="arrow-icon">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                </a>
+
+                <a href="/proposal" class="link-item">
+                    <div class="link-icon">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="link-content">
+                        <span class="link-title">Project Proposal</span>
+                        <span class="link-desc">Proposal website Spesifikasi Ponsel</span>
+                    </div>
+                    <div class="arrow-icon">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                </a>
+
+                <a href="/pdf" class="link-item" target="_blank">
+                    <div class="link-icon">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                    </div>
+                    <div class="link-content">
+                        <span class="link-title">Download PDF</span>
+                        <span class="link-desc">Unduh berkas proposal (PDF)</span>
+                    </div>
+                    <div class="arrow-icon">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                </a>
+            </div>
         </div>
     </div>
 </body>

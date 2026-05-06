@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/demo", "destination": "/phonespecs_demo.html" },
+    { "source": "/proposal", "destination": "/proposal_aries.html" },
+    { "source": "/pdf", "destination": "/Proposal_Aries.pdf" }
+  ]
+}
